@@ -37,7 +37,9 @@ body {
   color: #7e7e7e;
   background-color: #ebebeb;
 }
-
+.imagewi{
+  width:100px;
+}
 .name > span {
   color: #bbb;
 }
