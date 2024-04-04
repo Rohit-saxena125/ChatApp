@@ -110,7 +110,7 @@
       <li class="${isOwn ? "message-right" : "message-left"}">
          <p class="message">
           ${data.message} 
-          <span>${data.name}${moment(data.dateTime).fromNow()}</span>
+          <span>${data.name}   ${moment(data.dateTime).fromNow()}</span>
         </p>
       </li >
       `
@@ -124,7 +124,7 @@
         const element = `
         <li class ="${isOwn ? "message-right" : "message-left"}">
           <p class="message">
-            <img src="${data.image}" style="width:'100px'">
+            <img src="${data.image}" style="width:100px;height:40px">
             <span>${data.user}  ${moment(data.dateTime).fromNow()}</span>
             </p>
           </li>
