@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <h1>Chat app</h1>
+  <div class='main'>
+    <div class='name'>
+      <input type="text" id="name-input" class="name-input" value="Anonymus" />
+    </div>
+    <ul class="message-conainer" id="message-conainer">
+      <li class="message-feedback">
+        <p class="feedback" id="feedback">
+          killer is typing a mesage
+        </p>
+      </li>
+    </ul>
+    <form class="message-form" id="message-form">
+      <input type="text" name="message" id="message-input" class="message-input">
+      <div class="v-divder"></div>
+      <button class="send-buttoon" type="submit">send</button>
+    </form>
+    <form class="message-image" id="message-image">
+      <input type="file" id="imageInput" class="imageInput" />
+      <button type="submit">Send Image</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.28.0/moment.min.js"
+      integrity="sha512-Q1f3TS3vSt1jQ8AwP2OuenztnLU6LwxgyyYOG1jgMW/cbEMHps/3wjvnl1P3WTrF3chJUWEoxDUEjMxDV8pujg=="
+      crossorigin="anonymous"></script>
+    <script>
+      const socket = io();
+      const messageContainer = document.getElementById('message-conainer')
+      const nameInput = document.getElementById('name-input')
+      const messageform = document.getElementById('message-form')
+      const messageInput = document.getElementById('message-input')
+      const mesageImage = document.getElementById('message-image')
+      const imageInput = document.getElementById('imageInput')
+      messageform.addEventListener('submit', (e) => {
+        e.preventDefault()
+        sendMessage()
+      })
+      mesageImage.addEventListener('submit', (e) => {
+        e.preventDefault();
+        sendImage();
+      })
+      // brodcast image
+      socket.on('image', (data) => {
+        addImagetofrontend(false, data)
+      });
+// chat backup
+      socket.on('chatHistory', (chatLog) => {
+        console.log("chat", chatLog)
+        chatLog.forEach((message) => {
+          console.log("history", message)
+          if (message.hasOwnProperty('image')) {
+            if (message.user === nameInput.value) {
+              addImagetofrontend(true, message)
+            }
+            else {
+              addImagetofrontend(false, message)
+            }
+          }
+          else {
+            if (message.name === nameInput.value) {
+              addMessagetofrontend(true, message);
+            }
+            else {
+              addMessagetofrontend(false, message);
+            }
+          }
+        });
+      });
+      // send message to others
+      function sendMessage() {
+        if (messageInput.value === '') return
+        const data = {
+          name: nameInput.value,
+          message: messageInput.value,
+          dateTime: new Date()
+        }
+        socket.emit('message', data)
+        addMessagetofrontend(true, data)
+        messageInput.value = ''
+      }
+      // broadcast message to others
+      socket.on('chat-message', (data) => {
+        console.log(data)
+        addMessagetofrontend(false, data)
+      })
+      // send image
+      function sendImage() {
+        const fileInput = document.getElementById('imageInput');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const image = event.target.result;
+          const data = { user: nameInput.value, image, dateTime: new Date() }
+          socket.emit('image', data);
+          addImagetofrontend(true, data)
+          imageInput.value = ''
+        };
+        reader.readAsDataURL(file);
+      }
+      // display message to others in chat box
+      function addMessagetofrontend(isOwn, data) {
+        clearFeedback()
+        const element = `
+      <li class="${isOwn ? "message-right" : "message-left"}">
+         <p class="message">
+          ${data.message} 
+          <span>${data.name}${moment(data.dateTime).fromNow()}</span>
+        </p>
+      </li >
+      `
+        messageContainer.innerHTML += element
+        scrollToBottom()
+      }
+      // display image to other users
+      function addImagetofrontend(isOwn, data) {
+        console.log(data)
+        clearFeedback()
+        const element = `
+        <li class ="${isOwn ? "message-right" : "message-left"}">
+          <p class="message">
+            <img src="${data.image}" style="width:'100px'">
+            <span>${data.user}  ${moment(data.dateTime).fromNow()}</span>
+            </p>
+          </li>
+        `
+        messageContainer.innerHTML += element
+        scrollToBottom()
+      }
+      function scrollToBottom() {
+        messageContainer.scrollTo(0, messageContainer.scrollHeight)
+      }
+
+      messageInput.addEventListener('focus', (e) => {
+        socket.emit('feedback', {
+          feedback: `✍️ ${nameInput.value} is typing a message`,
+        })
+      })
+
+      messageInput.addEventListener('keypress', (e) => {
+        socket.emit('feedback', {
+          feedback: `✍️ ${nameInput.value} is typing a message`,
+        })
+      })
+      messageInput.addEventListener('blur', (e) => {
+        socket.emit('feedback', {
+          feedback: '',
+        })
+      })
+// display feedback on chat box
+      socket.on('feedback', (data) => {
+        clearFeedback()
+        const element = `
+        <li class="message-feedback">
+          <p class="feedback" id="feedback">${data.feedback}</p>
+        </li>
+  `
+        messageContainer.innerHTML += element
+      })
+      // clear feedback to chat box when the one person not write anything
+      function clearFeedback() {
+        document.querySelectorAll('li.message-feedback').forEach((element) => {
+          element.parentNode.removeChild(element)
+        })
+      }
+      function addImagetofrontend(isOwn, data) {
+        console.log(data)
+        clearFeedback()
+        const element = `
+        <li class ="${isOwn ? "message-right" : "message-left"}">
+          <p class="message">
+            <img src="${data.image}" style="width:'100px'">
+            <span>${data.user}  ${moment(data.dateTime).fromNow()}</span>
+            </p>
+          </li>
+        `
+        messageContainer.innerHTML += element
+        scrollToBottom()
+      }
+    </script>
+  </div>
+</body>
+</html>
